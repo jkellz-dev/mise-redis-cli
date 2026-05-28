@@ -10,6 +10,7 @@
 
 - [Dependencies](#dependencies)
 - [Install](#install)
+  - [Version selection](#version-selection)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -32,13 +33,13 @@ redis-cli:
 
 ```shell
 # Show all installable versions
-asdf list-all redis-cli
+asdf list all redis-cli
 
-# Install specific version
+# Install the latest stable redis-cli
 asdf install redis-cli latest
 
-# Set a version globally (on your ~/.tool-versions file)
-asdf global redis-cli latest
+# Set a version for your user (writes to your ~/.tool-versions)
+asdf set -u redis-cli latest
 
 # Now redis-cli commands are available
 redis-cli --version
@@ -47,13 +48,29 @@ redis-cli --version
 Check [asdf](https://github.com/asdf-vm/asdf) readme for more instructions on how to
 install & manage versions.
 
+## Version selection
+
+`latest` resolves to the newest stable Redis source release and skips beta/rc/milestone releases.
+
+```shell
+# Latest stable release
+asdf install redis-cli latest
+
+# Latest stable release in a version series
+asdf install redis-cli latest:8.6
+
+# Specific release
+asdf install redis-cli 8.8.0
+```
+
 # Contributing
 
 Contributions of any kind welcome! See the [contributing guide](contributing.md).
 
 Testing Locally:
+
 ```shell
-asdf plugin test redis-cli https://github.com/NeoHsu/asdf-redis-cli.git "redis-cli --version"
+asdf plugin test redis-cli https://github.com/NeoHsu/asdf-redis-cli.git "redis-cli --version" --asdf-tool-version latest
 ```
 
 [Thanks goes to these contributors](https://github.com/NeoHsu/asdf-redis-cli/graphs/contributors)!
