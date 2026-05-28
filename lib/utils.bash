@@ -24,17 +24,50 @@ sort_versions() {
 }
 
 list_all_versions() {
-	curl -s http://download.redis.io/releases/ |
+	curl -fsSL https://download.redis.io/releases/ |
 		grep -o 'href="redis-.*\.tar\.gz"' |
 		sed 's/href="redis-//' |
 		sed 's/\.tar\.gz"//'
+}
+
+latest_stable_version() {
+	local query="${1:-}"
+	local latest=""
+
+	while IFS= read -r version; do
+		[ -z "$version" ] && continue
+		[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+		if [ -n "$query" ] && [ "${version#"$query"}" = "$version" ]; then
+			continue
+		fi
+		latest="$version"
+	done < <(list_all_versions | sort_versions)
+
+	[ -n "$latest" ] || fail "No stable version found matching '${query}'"
+	printf "%s\n" "$latest"
+}
+
+resolve_version() {
+	local version="$1"
+
+	case "$version" in
+	latest)
+		latest_stable_version
+		;;
+	latest:*)
+		latest_stable_version "${version#latest:}"
+		;;
+	*)
+		printf "%s\n" "$version"
+		;;
+	esac
 }
 
 download_release() {
 	local version filename url
 	version="$1"
 	filename="$2"
-	url="http://download.redis.io/releases/redis-${version}.tar.gz"
+	url="https://download.redis.io/releases/redis-${version}.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -49,6 +82,9 @@ install_version() {
 		fail "asdf-$TOOL_NAME supports release installs only"
 	fi
 
+	local resolved_version
+	resolved_version=$(resolve_version "$version")
+
 	(
 		mkdir -p "$install_path"/bin
 		cp -r "$ASDF_DOWNLOAD_PATH"/src/redis-cli "$install_path"/bin/
@@ -57,9 +93,9 @@ install_version() {
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/bin/$tool_cmd" || fail "Expected $install_path/bin/$tool_cmd to be executable."
 
-		echo "$TOOL_NAME $version installation was successful!"
+		echo "$TOOL_NAME $resolved_version installation was successful!"
 	) || (
 		rm -rf "$install_path"
-		fail "An error ocurred while installing $TOOL_NAME $version."
+		fail "An error ocurred while installing $TOOL_NAME $resolved_version."
 	)
 }

@@ -7,16 +7,17 @@ source "$(dirname "$0")/../lib/utils.bash"
 
 mkdir -p "$ASDF_DOWNLOAD_PATH"
 
-release_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION.tar.gz"
+resolved_version=$(resolve_version "$ASDF_INSTALL_VERSION")
+release_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$resolved_version.tar.gz"
 
 # Download tar.gz file to the download directory
-download_release "$ASDF_INSTALL_VERSION" "$release_file"
+download_release "$resolved_version" "$release_file"
 
 #  Extract contents of tar.gz file into the download directory
 tar xzf "$release_file" -C "$ASDF_DOWNLOAD_PATH" --strip-components=1 || fail "Could not extract $release_file"
 
 cd "$ASDF_DOWNLOAD_PATH"
-make BUILD_TLS=yes redis-cli
+make BUILD_TLS=yes MALLOC=libc redis-cli
 
 # Remove the tar.gz file since we don't need to keep it
 rm "$release_file"
