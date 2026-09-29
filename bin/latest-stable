@@ -8,22 +8,14 @@ plugin_dir=$(dirname "$(dirname "$current_script_path")")
 # shellcheck source=./lib/utils.bash
 . "${plugin_dir}/lib/utils.bash"
 
-curl_opts=(-sI)
-
-if [ -n "${GITHUB_API_TOKEN:-}" ]; then
-	curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
-fi
-
-# curl of REPO/releases/latest is expected to be a 302 to another URL
-# when no releases redirect_url="REPO/releases"
-# when there are releases redirect_url="REPO/releases/tag/v<VERSION>"
-redirect_url=$(curl "${curl_opts[@]}" "$GH_REPO/releases/latest" | sed -n -e "s|^location: *||p" | sed -n -e "s|\r||p")
-version=
-printf "redirect url: %s\n" "$redirect_url" >&2
-if [[ "$redirect_url" == "$GH_REPO/releases" ]]; then
-	version="$(list_all_versions | sort_versions | tail -n1 | xargs echo)"
-else
-	version="$(printf "%s\n" "$redirect_url" | sed 's|.*/tag/v\{0,1\}\||')"
-fi
-
-printf "%s\n" "$version"
+# redis-cli versions are published on download.redis.io (see list_all_versions),
+# not on GitHub releases, so there is no "$GH_REPO/releases/latest" redirect to
+# follow. Restrict to clean numeric versions (X.Y or X.Y.Z) so pre-release and
+# legacy tags (e.g. 8.10-rc1, 8.2-m01, beta-9) are excluded. Note the shared
+# sort_versions sorts those legacy tags above real releases, so filtering here
+# (not just `tail`) is required to get the true latest stable.
+list_all_versions |
+	grep -E '^[0-9]+(\.[0-9]+){1,2}$' |
+	sort_versions |
+	tail -n1 |
+	xargs echo
